@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>🎤 Team Shout Lobby | TeamConnect.fun</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600&family=Inter:wght@400;600&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --neon-pink:#ff6fb3;
+    --neon-purple:#c084fc;
+    --bg-0: linear-gradient(180deg,#050014 0%, #0b0028 60%, #040012 100%);
+    --glass: rgba(255,255,255,0.04);
+    --muted: #bfb8e9;
+  }
+
+  /* --- base layout --- */
+  html,body{height:100%;margin:0;font-family:Inter,system-ui;background:var(--bg-0);color:#fff;-webkit-font-smoothing:antialiased;display:flex;flex-direction:column;}
+  main{flex:1}
+  header{display:flex;align-items:center;justify-content:space-between;padding:18px 28px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));backdrop-filter:blur(8px);border-bottom:1px solid rgba(255,255,255,0.03);z-index:10;}
+  .brand{font-family:Orbitron,mono;color:var(--neon-pink);font-weight:700;letter-spacing:0.5px;font-size:18px;}
+  nav a{color:#ddd;text-decoration:none;transition:all .18s ease}
+  nav a:hover{ color:var(--neon-pink); text-shadow:0 0 8px rgba(255,111,179,0.18) }
+
+  /* container sized so footer sits well */
+  .container{max-width:980px;margin:28px auto; padding:16px; display:flex; flex-direction:column; gap:20px; min-height:calc(100vh - 220px); z-index:2;}
+
+  /* --- animated background accents --- */
+  body::before{
+    content:"";
+    position:fixed;inset:0;z-index:0;pointer-events:none;
+    background:
+      radial-gradient(600px 300px at 10% 10%, rgba(192,132,252,0.06), transparent 20%),
+      radial-gradient(500px 250px at 85% 20%, rgba(255,111,179,0.04), transparent 20%),
+      linear-gradient(180deg, rgba(6,3,23,0.35), transparent 40%);
+    mix-blend-mode:screen;
+    animation:slowShift 12s linear infinite alternate;
+  }
+  @keyframes slowShift { from{filter: hue-rotate(0deg);} to{filter: hue-rotate(20deg);} }
+
+  /* --- card --- */
+  .card{position:relative;z-index:2;background:var(--glass);border:1px solid rgba(255,255,255,0.06);border-radius:16px;padding:20px;box-shadow:0 20px 60px rgba(0,0,0,0.6);overflow:hidden}
+  .title{font-family:Orbitron,monospace;color:var(--neon-purple);font-size:26px;margin-bottom:6px;text-shadow:0 0 8px rgba(192,132,252,0.12)}
+  .meta { color:var(--muted); font-size:13px; }
+
+  /* --- room header --- */
+  .room-row{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .room-left{display:flex;flex-direction:column}
+  .room-code { display:inline-flex; align-items:center; gap:8px; font-family:monospace; color:var(--neon-pink); font-weight:700; background:rgba(255,255,255,0.03); padding:8px 10px; border-radius:10px; border:1px solid rgba(255,255,255,0.03); box-shadow: 0 6px 18px rgba(192,132,252,0.05)}
+  .copy-btn { background:transparent; border:1px solid rgba(255,255,255,0.04); padding:6px 8px; border-radius:8px; cursor:pointer; color:#fff; transition:all .18s; }
+  .copy-btn:hover { transform:translateY(-2px); box-shadow:0 6px 18px rgba(255,111,179,0.06); color:var(--neon-pink) }
+
+  /* --- layout --- */
+  .flex-row { display:flex; gap:20px; align-items:flex-start; flex-wrap:wrap; margin-top:16px; }
+  .left { flex:1; min-width:260px; }
+  .right { width:340px; }
+
+  /* --- players list --- */
+  .players-card { padding:12px; border-radius:12px; background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.005)); border:1px solid rgba(255,255,255,0.02); }
+  .players-header { display:flex;justify-content:space-between;align-items:center;margin-bottom:10px }
+  .player-count { color:var(--muted); font-weight:600; font-size:13px; }
+  .players { display:grid; gap:10px; grid-auto-rows:min-content; transition:all .25s ease; }
+  @media(min-width:880px){ .players{grid-template-columns:1fr;} }
+  @media(max-width:520px){ .players{grid-template-columns:1fr 1fr; gap:8px;} }
+
+  .player {
+    background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    border-radius:12px;padding:10px 12px; display:flex; align-items:center; gap:10px; font-weight:600; color:#f6f0ff; border:1px solid rgba(255,255,255,0.02); transform:translateY(6px); opacity:0; transition:all .28s cubic-bezier(.2,.9,.2,1);
+  }
+  .player.enter { transform:none; opacity:1; }
+  .player:hover { transform:translateY(-4px); box-shadow:0 10px 30px rgba(192,132,252,0.06); }
+  .player.you { box-shadow: 0 10px 40px rgba(255,111,179,0.09); border:1px solid rgba(255,111,179,0.14); position:relative; }
+  .you-badge { background:linear-gradient(90deg,var(--neon-pink),var(--neon-purple)); color:#070014; padding:4px 8px; border-radius:999px; font-weight:800; font-size:12px; margin-left:auto; box-shadow:0 6px 22px rgba(255,111,179,0.08) }
+
+  /* --- tips --- */
+  .tips { margin-top:12px; padding:12px; border-radius:10px; background: linear-gradient(90deg, rgba(255,255,255,0.01), rgba(255,255,255,0.005)); color:#eae6ff; font-size:0.95rem; min-height:48px; display:flex; align-items:center; position:relative; overflow:hidden; }
+  .tips::before{ content:"💡 Pro Tip"; position:absolute; left:12px; top:-10px; background:#070014; padding:3px 8px; border-radius:8px; color:var(--neon-pink); font-weight:800; font-size:12px; box-shadow:0 6px 18px rgba(255,111,179,0.06) }
+  .tips .tip { position:absolute; left:12px; right:12px; opacity:0; transform:translateY(6px); transition:all .45s ease; font-weight:700; color:#f6ebff; text-shadow:0 0 10px rgba(192,132,252,0.06); }
+  .tips .tip.active { opacity:1; transform:translateY(0); color:var(--neon-pink); text-shadow:0 0 14px rgba(255,111,179,0.12) }
+
+  /* --- host controls (collapsible visual) --- */
+  .host-panel { border-radius:12px; padding:12px; background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.005)); border:1px solid rgba(255,255,255,0.02); position:relative; }
+  .host-header { display:flex;justify-content:space-between;align-items:center;gap:10px;cursor:pointer}
+  .host-title { font-weight:800; color:var(--muted) }
+  .host-body { margin-top:12px; display:block; transition:all .28s ease; }
+  .host-controls-row{ display:flex; flex-direction:column; gap:8px }
+  .host-row { display:flex; gap:8px; align-items:center; }
+  .host-actions { display:flex; gap:8px; margin-top:10px; align-items:center; }
+
+  /* --- inputs & buttons --- */
+  input, select { background:rgba(0,0,0,0.35); border:1px solid rgba(255,255,255,0.06); color:#fff; padding:10px 12px; border-radius:10px; outline:none; transition:box-shadow .18s, transform .12s; }
+  input:focus, select:focus { box-shadow: 0 6px 22px rgba(192,132,252,0.08); transform:translateY(-2px); }
+  .btn { background:linear-gradient(90deg,var(--neon-pink),var(--neon-purple)); color:#070014; padding:10px 16px; border-radius:12px; font-weight:800; border:none; cursor:pointer; box-shadow:0 10px 30px rgba(192,132,252,0.08); transition:transform .12s ease, box-shadow .12s ease; }
+  .btn:hover{ transform:translateY(-4px); box-shadow:0 18px 46px rgba(192,132,252,0.14); }
+  .btn-ghost { background:transparent; border:1px solid rgba(255,255,255,0.06); color:#ddd; padding:10px 14px; border-radius:12px; font-weight:800; }
+  .btn-ghost:hover{ color:var(--neon-pink); box-shadow:0 12px 30px rgba(255,111,179,0.08); border-color:rgba(255,111,179,0.18) }
+  .small { padding:8px 10px; font-weight:700; border-radius:10px; }
+
+  /* --- neon spinner (id genSpinner kept the same) --- */
+  .neon-spinner { width:18px;height:18px;border-radius:50%;position:relative; box-shadow: 0 0 0 0 rgba(192,132,252,0.08); animation:spinPulse 1.1s linear infinite; }
+  .neon-spinner:before, .neon-spinner:after { content:""; position:absolute; inset:3px; border-radius:50%; border:2px solid rgba(255,255,255,0.06); }
+  .neon-spinner:after { border-top-color:var(--neon-pink); transform:rotate(0deg); animation:spin 0.9s linear infinite; }
+  @keyframes spin { to{ transform: rotate(360deg);} }
+  @keyframes spinPulse { 0%{ box-shadow:0 0 0 0 rgba(192,132,252,0.08);} 70%{ box-shadow:0 0 40px 12px rgba(192,132,252,0.02);} 100%{ box-shadow:0 0 0 0 rgba(192,132,252,0.0);} }
+
+  /* --- footer --- */
+  footer{ text-align:center;color:#b9b0dd;margin-top:auto;font-size:13px;padding:12px 0;border-top:1px solid rgba(255,255,255,0.03);background:transparent}
+
+  /* --- small screens: sticky host controls --- */
+  @media(max-width:640px){
+    .right{ width:100%; order:2; position:sticky; bottom:14px; z-index:6; padding:12px; background:transparent; }
+    .host-panel{ box-shadow: 0 16px 50px rgba(2,1,7,0.6); }
+    .container{ padding-bottom:100px; }
+  }
+</style>
+</head>
+<body>
+  <header>
+    <div class="brand">TeamConnect.fun</div>
+    <nav>
+      <a href="index.html">Home</a>
+    </nav>
+  </header>
+
+  <main>
+    <div class="container">
+      <div class="card" aria-live="polite">
+        <div class="room-row">
+          <div class="room-left">
+            <div class="title">🎤 Team Shout — Lobby</div>
+            <div class="meta">Room: <span class="room-code" id="room-code">0000</span></div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-weight:800;color:var(--neon-pink);font-size:13px">Live • Multiplayer</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:6px">Share code to invite players</div>
+          </div>
+        </div>
+
+        <div class="flex-row" style="margin-top:16px;">
+          <!-- Players list -->
+          <div class="left">
+            <div class="players-card">
+              <div class="players-header">
+                <div style="font-weight:800;color:#e9e1ff">Players</div>
+                <div class="player-count" id="playerCount">0 players</div>
+              </div>
+
+              <div class="players" id="player-list">
+                <div style="opacity:0.6;font-style:italic">Waiting for players...</div>
+              </div>
+
+              <div class="tips" id="tipsBox" aria-hidden="false">
+                <!-- tips will be injected -->
+                <div class="tip active">Tip: Press <strong>Enter</strong> to submit your answer during the game.</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Host-only controls -->
+          <div class="right">
+            <div class="host-panel" id="hostControls" style="display:none;">
+              <div class="host-header" id="hostToggle" title="Toggle host options">
+                <div class="host-title">Host Controls</div>
+                <div style="display:flex;gap:8px;align-items:center">
+                  <button id="copyRoomBtn" class="copy-btn small" title="Copy room code">📋 Copy</button>
+                  <div id="genSpinner" style="display:none" aria-hidden="true">
+                    <div class="neon-spinner" aria-hidden="true"></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="host-body" id="hostBody">
+                <div style="margin-top:12px" class="host-controls-row">
+                  <input id="themeInput" placeholder="Theme (default: general)" />
+                  <div class="host-row">
+                    <select id="difficultySelect">
+                      <option value="easy">Easy</option>
+                      <option value="medium">Medium</option>
+                      <option value="hard">Hard</option>
+                    </select>
+                    <input id="numPrompts" type="number" min="1" max="15" placeholder="Rounds (default: 10)" style="width:120px;" />
+                  </div>
+                </div>
+
+                <div class="host-actions" style="margin-top:12px;">
+                  <button id="generateBtn" class="btn">Generate</button>
+                  <button id="startBtn" class="btn btn-ghost" disabled>🚀 Start</button>
+                </div>
+              </div>
+            </div>
+            <p class="status" id="hostNote" style="margin-top:10px;color:var(--muted)"></p>
+          </div>
+        </div>
+      </div>
+
+      <footer>&copy; 2025 TeamConnect.fun — Crafted with ❤️</footer>
+    </div>
+  </main>
+
+<script>
+  // --- keep all existing IDs & logic intact ---
+  const socket = io("/teamshout");
+  const name = localStorage.getItem("username");
+  const room = localStorage.getItem("room");
+  const playerId = localStorage.getItem("playerId");
+
+  if(!name || !room || !playerId){
+    alert("Missing info. Please rejoin.");
+    window.location.href = "team-shout-room.html";
+  }
+
+  // keep original DOM references for your logic
+  document.getElementById("room-code").textContent = room.replace("shout-","");
+
+  const playerList = document.getElementById("player-list");
+  const hostControls = document.getElementById("hostControls");
+  const generateBtn = document.getElementById("generateBtn");
+  const startBtn = document.getElementById("startBtn");
+  const themeInput = document.getElementById("themeInput");
+  const difficultySelect = document.getElementById("difficultySelect");
+  const numPromptsInput = document.getElementById("numPrompts");
+  const genSpinner = document.getElementById("genSpinner");
+  const hostNote = document.getElementById("hostNote");
+  const tipsBox = document.getElementById("tipsBox");
+  const playerCount = document.getElementById("playerCount");
+  const copyRoomBtn = document.getElementById("copyRoomBtn");
+  const hostBody = document.getElementById("hostBody");
+  const hostToggle = document.getElementById("hostToggle");
+
+  // rotating tips (fade in/out)
+  const tips = [
+    "Press Enter to submit your answer during the game.",
+    "Fastest correct answer scores the most — be quick!",
+    "You can submit only once per round.",
+    "Short answers work best (matching is case-insensitive).",
+    "Host can set theme, difficulty and rounds before starting."
+  ];
+  let tipIndex = 0;
+
+  function showTip(i){
+    tipsBox.querySelectorAll('.tip').forEach(t=>t.remove());
+    const div = document.createElement('div');
+    div.className = 'tip active';
+    div.innerHTML = tips[i];
+    tipsBox.appendChild(div);
+  }
+  showTip(0);
+  setInterval(()=>{ tipIndex = (tipIndex + 1) % tips.length; showTip(tipIndex); }, 5000);
+
+  // copy room code
+  copyRoomBtn.addEventListener('click', async ()=>{
+    const code = (room || "").replace("shout-","");
+    try{
+      await navigator.clipboard.writeText(code);
+      copyRoomBtn.textContent = "Copied ✓";
+      setTimeout(()=> copyRoomBtn.textContent = "📋 Copy", 1400);
+    }catch(e){
+      alert("Copy failed — please select and copy manually.");
+    }
+  });
+
+  // host panel collapse toggle (visual only)
+  let hostOpen = true;
+  hostToggle.addEventListener('click', ()=>{
+    hostOpen = !hostOpen;
+    hostBody.style.display = hostOpen ? 'block' : 'none';
+  });
+
+  // animate players insertion: keep same logic as before but add "enter" class after append
+  socket.on("connect", ()=>{
+    socket.emit("join-room", { room, name, playerId }, (res)=>{
+      if(!res || !res.success){ alert(res?.error || "Join failed"); window.location.href = "team-shout-room.html"; }
+    });
+  });
+
+  socket.on("player-list", ({ players, hostPlayerId })=>{
+    // preserve original behavior but improved UI: animate, show player count, YOU badge, host-only visibility
+    playerList.innerHTML = "";
+    const seen = new Set();
+    let shown = 0;
+    players.forEach(p=>{
+      if(seen.has(p.playerId)) return;
+      seen.add(p.playerId);
+      const el = document.createElement("div");
+      el.className = "player";
+      el.innerHTML = `${p.playerId === hostPlayerId ? '<span class="host-badge">HOST</span>' : '🎮'} <span style="margin-left:8px">${p.name}</span>`;
+      if(p.playerId === playerId){
+        el.classList.add('you');
+        const span = document.createElement('span');
+        span.className = 'you-badge';
+        span.textContent = 'YOU';
+        el.appendChild(span);
+      }
+      playerList.appendChild(el);
+      // animate
+      setTimeout(()=> el.classList.add('enter'), 40 + (shown * 45));
+      shown++;
+    });
+
+    playerCount.textContent = `${players.length} player${players.length === 1 ? '' : 's'}`;
+
+    // host-only UI visibility (controlled by server truth)
+    if(playerId === hostPlayerId){
+      hostControls.style.display = "block";
+      hostNote.textContent = "You are the host — generate prompts or Start (auto-generate defaults).";
+    } else {
+      hostControls.style.display = "none";
+      hostNote.textContent = "Waiting for host to generate and start the game.";
+    }
+  });
+
+  // keep prompts-status handling; use new spinner style
+  socket.on("prompts-status", ({ status })=>{
+    if(status === "generating"){
+      genSpinner.style.display = "inline-block";
+      startBtn.disabled = true;
+      startBtn.textContent = "Generating…";
+    } else if(status === "ready"){
+      genSpinner.style.display = "none";
+      startBtn.disabled = false;
+      startBtn.textContent = "🚀 Start";
+    }
+  });
+
+  // game-start redirect remains unchanged
+  socket.on("game-start", ()=>{
+    window.location.href = "team-shout.html";
+  });
+
+  // attach the same handlers (these buttons are referenced by your existing logic)
+  generateBtn.addEventListener("click", ()=>{
+    generateBtn.disabled = true;
+    genSpinner.style.display = "inline-block";
+    const theme = (themeInput.value || "general").trim();
+    const difficulty = difficultySelect.value || "easy";
+    let numPrompts = parseInt(numPromptsInput.value) || 10;
+    if(numPrompts < 1) numPrompts = 10;
+    if(numPrompts > 15) numPrompts = 15;
+    socket.emit("generate-prompts", { room, theme, difficulty, numPrompts }, (res)=>{
+      generateBtn.disabled = false;
+      genSpinner.style.display = "none";
+      if(!res || !res.success){
+        alert(res?.error || "Failed to generate prompts");
+      }
+    });
+  });
+
+  startBtn.addEventListener("click", ()=>{
+    startBtn.disabled = true;
+    startBtn.textContent = "Starting…";
+    socket.emit("start-game", { room }, (res)=>{
+      if(!res || !res.success){
+        alert(res?.error || "Failed to start");
+        startBtn.disabled = false;
+        startBtn.textContent = "🚀 Start";
+        return;
+      }
+      window.location.href = "team-shout.html";
+    });
+  });
+
+  // attempt rejoin on reconnect
+  socket.on("reconnect", ()=>{
+    socket.emit("join-room", { room, name, playerId }, ()=>{});
+  });
+</script>
+</body>
+</html>
+

@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>🎤 Team Shout — Game</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600&family=Inter:wght@400;600&display=swap" rel="stylesheet" />
+<style>
+:root{--pink:#ff6fb3;--purple:#c084fc;--bg:linear-gradient(180deg,#070014 0%, #0b0028 100%);}
+html,body{height:100%;margin:0;background:var(--bg);color:#fff;font-family:Inter,system-ui;}
+.container{max-width:1100px;margin:28px auto;padding:20px;}
+.header{display:flex;justify-content:space-between;align-items:center;}
+.title{font-family:Orbitron,monospace;color:var(--pink);font-size:30px;}
+.roomcode{color:var(--purple);font-weight:700;}
+.card{background:rgba(255,255,255,0.03);padding:18px;border-radius:12px;border:1px solid rgba(255,255,255,0.04);box-shadow:0 10px 30px rgba(0,0,0,0.6); margin-top:14px;}
+.prompt{font-size:1.6rem;font-weight:700;padding:20px;border-radius:10px;border:2px solid rgba(192,132,252,0.12); text-align:center;background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.015));}
+.controls{display:flex;gap:12px;align-items:center;margin-top:14px;}
+.input{flex:1;padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.06);background:rgba(0,0,0,0.35);color:#fff;}
+.btn{background:linear-gradient(90deg,var(--pink),var(--purple));color:#070014;padding:10px 16px;border-radius:999px;border:none;font-weight:700;cursor:pointer;}
+.timer{color:#ff7b7b;font-weight:800;margin-top:12px;font-size:1.05rem;}
+.leader{margin-top:16px;padding:12px;border-radius:10px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.03)}
+.footer-buttons{display:flex;gap:12px;justify-content:center;margin-top:12px;}
+.hidden{display:none;}
+</style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div><div class="title">TEAM SHOUT</div><div style="font-size:13px;color:#d6ccf9;margin-top:6px;">Live • Neon</div></div>
+      <div class="roomcode">Room: <span id="room-code">0000</span></div>
+    </div>
+
+    <div class="card">
+      <div id="status" style="color:#d6c7ff;margin-bottom:8px;">Waiting for host to start...</div>
+      <div id="timer" class="timer hidden">⏳ Round ends in: 10s</div>
+
+      <div class="prompt" id="promptBox">Loading prompt...</div>
+
+      <div class="controls">
+        <input id="answer" class="input" placeholder="Type your answer and press Enter or click Submit" />
+        <button id="submitBtn" class="btn">🚀 Submit</button>
+      </div>
+
+      <div class="leader">
+        <h3 style="margin:0 0 8px 0;color:var(--purple);font-weight:800;">🏆 Leaderboard</h3>
+        <ul id="scoreboard" style="list-style:none;margin:0;padding:0"></ul>
+
+        <div id="endButtons" class="footer-buttons hidden">
+          <button id="home-btn" class="btn">🏠 Home</button>
+          <button id="restart-btn" class="btn" onclick="window.location.href='team-shout-room.html'">🔄 Restart</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+const socket = io("/teamshout");
+const name = localStorage.getItem("username");
+const room = localStorage.getItem("room");
+const playerId = localStorage.getItem("playerId");
+const isHost = localStorage.getItem("isHost")==="true";
+
+if(!name || !room || !playerId){ 
+  alert("Missing info. Please rejoin."); 
+  window.location.href="team-shout-room.html"; 
+}
+
+document.getElementById("room-code").textContent = room.replace("shout-","");
+
+const answerInput = document.getElementById("answer");
+const submitBtn = document.getElementById("submitBtn");
+const promptBox = document.getElementById("promptBox");
+const timerEl = document.getElementById("timer");
+const scoreboardEl = document.getElementById("scoreboard");
+const statusEl = document.getElementById("status");
+const endButtons = document.getElementById("endButtons");
+
+let roundTimerInterval = null;
+let roundRemaining = 0;
+
+function startRoundTimer(seconds){
+  clearInterval(roundTimerInterval);
+  roundRemaining = seconds;
+  timerEl.classList.remove("hidden");
+  timerEl.textContent = `⏳ Round ends in: ${roundRemaining}s`;
+  roundTimerInterval = setInterval(()=>{
+    roundRemaining--;
+    if(roundRemaining < 0) roundRemaining = 0;
+    timerEl.textContent = `⏳ Round ends in: ${roundRemaining}s`;
+    if(roundRemaining <= 0){
+      clearInterval(roundTimerInterval);
+      timerEl.classList.add("hidden");
+      answerInput.disabled = true;
+      submitBtn.disabled = true;
+    }
+  },1000);
+}
+
+function submitAnswer(){
+  const txt = answerInput.value.trim();
+  if(!txt) return;
+  socket.emit("submit-answer", { room, playerId, answer: txt });
+  answerInput.value = "";
+  answerInput.disabled = true;
+  submitBtn.disabled = true;
+}
+
+submitBtn.addEventListener("click", submitAnswer);
+answerInput.addEventListener("keydown", (e)=>{
+  if(e.key === "Enter"){ e.preventDefault(); submitAnswer(); }
+});
+
+socket.on("connect", ()=>{
+  socket.emit("join-room", { room, name, playerId, isHost }, (res)=>{
+    if(!res || !res.success){ alert(res?.error || "Join failed"); window.location.href="team-shout-room.html"; }
+  });
+});
+
+socket.on("game-start", ()=>{ statusEl.textContent = "Game started!"; });
+
+socket.on("new-round", ({ prompt, round, time })=>{
+  statusEl.textContent = `Round ${round}`;
+  promptBox.textContent = prompt;
+  answerInput.disabled = false;
+  submitBtn.disabled = false;
+  startRoundTimer((typeof time === "number" && time > 0) ? time : 10);
+});
+
+socket.on("answer-received", ({ name: who, answer, isCorrect })=>{
+  console.log(`${who} answered: ${answer} (correct:${isCorrect})`);
+});
+
+socket.on("round-ended", ({ scoreboard, awarded })=>{
+  clearInterval(roundTimerInterval);
+  timerEl.classList.add("hidden");
+  scoreboardEl.innerHTML = "";
+  scoreboard.sort((a,b)=>b.score-a.score).forEach(p=>{
+    const li = document.createElement("li");
+    li.style.padding = "6px 0";
+    li.innerHTML = `🎮 <strong>${p.name}</strong> — <span style="color:var(--pink);font-weight:800">${p.score}</span>`;
+    scoreboardEl.appendChild(li);
+  });
+  if(Array.isArray(awarded) && awarded.length){
+    statusEl.textContent = awarded.map(a=>`${a.name} +${a.points}`).join(" • ");
+  } else {
+    statusEl.textContent = "Round ended — no correct answers.";
+  }
+  answerInput.disabled = true;
+  submitBtn.disabled = true;
+});
+
+// 🎉 GAME OVER EVENT
+socket.on("game-over", (players)=>{
+  promptBox.textContent = "🏆 Final Podium";
+  statusEl.textContent = "🎉 Game Over!";
+
+  // Fire confetti bursts
+  let confettiCount = 0;
+  const confettiInterval = setInterval(()=>{
+    confetti({
+      particleCount: 120,
+      spread: 80,
+      origin: { y: 0.6 }
+    });
+    confettiCount++;
+    if(confettiCount >= 5) clearInterval(confettiInterval); // 5 bursts
+  }, 600);
+
+  answerInput.style.display = "none";
+  submitBtn.style.display = "none";
+
+  scoreboardEl.innerHTML = "";
+  players.sort((a,b)=>b.score-a.score).slice(0,3).forEach((p,i)=>{
+    const medal = ["🥇","🥈","🥉"][i] || "🏅";
+    const li = document.createElement("li");
+    li.style.padding = "8px 0";
+    li.innerHTML = `<strong style="font-size:1.05rem">${medal}</strong> ${p.name} — <span style="color:var(--pink);font-weight:800">${p.score}</span>`;
+    scoreboardEl.appendChild(li);
+  });
+
+  const rest = players.sort((a,b)=>b.score-a.score).slice(3);
+  rest.forEach(p=>{
+    const li = document.createElement("li");
+    li.style.padding = "4px 0";
+    li.innerHTML = `— ${p.name} — <span style="color:var(--pink)">${p.score}</span>`;
+    scoreboardEl.appendChild(li);
+  });
+
+  endButtons.classList.remove("hidden");
+});
+
+// ✅ Fixed Home button redirect
+document.getElementById("home-btn").onclick = ()=>{
+  window.location.href = "/";
+};
+</script>
+</body>
+</html>
