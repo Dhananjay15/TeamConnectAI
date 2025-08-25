@@ -8,12 +8,10 @@ from cohere import ClientV2
 import json
 import os
 
-COHERE_API_KEY = "hPoEHqV0TjLRUZohWxFRxDZZlte0Gsrii5vId0k6"
 # ====== CONFIG ======
-'''
 cohere_api_key = os.getenv("COHERE_API_KEY")
 if not cohere_api_key:
-    raise ValueError("❌ COHERE_API_KEY not set in environment!")'''
+    raise ValueError("❌ COHERE_API_KEY not set in environment!")
 cohere_client = ClientV2(api_key=COHERE_API_KEY)
 
 DEFAULT_THEME = "general"
