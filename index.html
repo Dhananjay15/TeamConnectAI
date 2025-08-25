@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TeamConnect.fun — Multiplayer Games for Remote Teams</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600&family=Inter:wght@400;600&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vanilla-tilt@1.7.2/dist/vanilla-tilt.min.js"></script>
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background: radial-gradient(ellipse at top, #0f0c29, #302b63, #000000);
+      overflow-x: hidden;
+      color: #fff;
+    }
+    .tilt-card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(14px);
+      border-radius: 1.5rem;
+      box-shadow: 0 0 25px rgba(168, 85, 247, 0.3);
+      transition: all 0.3s ease;
+    }
+    .tilt-card:hover {
+      box-shadow: 0 0 40px rgba(236, 72, 153, 0.4);
+      transform: scale(1.03);
+    }
+    .floating-emoji {
+      position: absolute;
+      font-size: 2rem;
+      opacity: 0.05;
+      animation: float 25s linear infinite;
+      user-select: none;
+      pointer-events: none;
+    }
+    @keyframes float {
+      0% { transform: translateY(100vh) rotate(0deg); }
+      100% { transform: translateY(-120vh) rotate(720deg); }
+    }
+    .glass-header {
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(12px);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Floating Emojis -->
+  <div class="pointer-events-none select-none z-0">
+    <div class="floating-emoji" style="left: 10%;">🎯</div>
+    <div class="floating-emoji" style="left: 30%;">🎉</div>
+    <div class="floating-emoji" style="left: 50%;">🎤</div>
+    <div class="floating-emoji" style="left: 70%;">🔥</div>
+    <div class="floating-emoji" style="left: 85%;">🧠</div>
+  </div>
+
+  <!-- Header -->
+  <header class="glass-header sticky top-0 z-50 w-full flex justify-between items-center px-6 py-4 shadow-lg">
+    <h1 class="text-2xl font-orbitron text-pink-400 font-bold">TeamConnect.fun</h1>
+    <nav class="text-sm font-medium text-white space-x-6">
+      <a href="#games" class="hover:text-pink-400">Games</a>
+      <a href="#about" class="hover:text-pink-400">About</a>
+      <a href="#contact" class="hover:text-pink-400">Contact</a>
+    </nav>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="text-center py-24 px-6 relative overflow-hidden">
+    <div class="absolute inset-0 z-0">
+      <div class="w-full h-full opacity-10 bg-[radial-gradient(#9333ea33_1px,transparent_1px)] [background-size:20px_20px] animate-pulse"></div>
+    </div>
+    <h2 class="relative text-6xl sm:text-7xl font-extrabold font-orbitron text-transparent bg-clip-text bg-gradient-to-r from-pink-500 via-purple-400 to-indigo-500 drop-shadow-lg mb-6">
+      The Ultimate Playground for Remote Teams
+    </h2>
+    <p class="relative text-lg text-gray-300 max-w-2xl mx-auto mb-6">
+      Premium browser games for Zoom parties, remote teams, and virtual bonding. Built to connect, compete, and have fun fast.
+    </p>
+    <a href="#games" class="relative inline-block mt-4 bg-pink-600 hover:bg-pink-700 text-white font-semibold px-7 py-3 rounded-full shadow-lg transition-all hover:scale-105">
+      🎮 Browse Games
+    </a>
+  </section>
+
+  <!-- Game Cards -->
+  <section id="games" class="px-6 pb-24">
+    <h3 class="text-3xl font-bold text-center text-white mb-12">🕹️ Select a Game to Begin</h3>
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-10 max-w-6xl mx-auto">
+
+      <div class="tilt-card p-6 text-center tilt cursor-pointer" onclick="window.location.href='games/teamshout/team-shout-room.html'">
+        <h4 class="text-2xl font-bold text-orange-300 mb-2">🎤 Team Shout</h4>
+        <p class="text-sm text-gray-300 mb-4">Typing battle royale. Shout fast. Shout right. Live scoreboard, leaderboard, confetti wins.</p>
+        <span class="inline-block mt-2 px-5 py-2 bg-orange-600 text-white rounded-full text-sm font-semibold">▶ Launch</span>
+      </div>
+
+      <div class="tilt-card p-6 text-center tilt relative overflow-hidden opacity-60 cursor-not-allowed group">
+        <h4 class="text-2xl font-bold text-gray-400 mb-2 group-hover:text-white transition">🤖 AI Chaos</h4>
+        <p class="text-sm text-gray-400 group-hover:text-gray-200 transition">AI-powered madness in development...</p>
+        <span class="inline-block mt-2 px-5 py-2 bg-gray-600 text-white rounded-full text-sm font-semibold">Coming Soon</span>
+        <div class="absolute inset-0 bg-gradient-to-br from-white/5 via-white/0 to-white/5 opacity-0 group-hover:opacity-10 transition duration-300 pointer-events-none"></div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- About Section -->
+  <section id="about" class="bg-white/5 backdrop-blur-md py-24 px-6 text-center rounded-3xl mx-4 mt-16 shadow-xl border border-white/10">
+    <h3 class="text-4xl font-bold text-purple-300 mb-8">💡 About TeamConnect.fun</h3>
+    <p class="max-w-4xl mx-auto text-gray-300 text-lg leading-loose tracking-wide">
+      TeamConnect.fun is a curated suite of lightning-fast multiplayer games designed for <span class="text-pink-400 font-semibold">virtual icebreakers</span>, <span class="text-yellow-300 font-semibold">team parties</span>, and <span class="text-blue-400 font-semibold">remote bonding</span>. Every game is crafted to be <strong>frictionless</strong>, <strong>fun-first</strong><br class="hidden sm:block" />
+      No downloads. No accounts. Just pure <span class="text-green-400 font-semibold">multiplayer joy</span>.
+    </p>
+  </section>
+
+  <!-- Footer -->
+  <footer id="contact" class="text-center text-sm text-gray-500 py-8 border-t border-white/10">
+    <p>&copy; 2025 TeamConnect.fun — Crafted with ❤️ by Dhananjay Dubey</p>
+    <p class="mt-2">
+      Contact: <a href="mailto:hello@teamconnect.fun" class="text-pink-500 hover:underline">hello@teamconnect.fun</a>
+    </p>
+  </footer>
+
+  <script>
+    VanillaTilt.init(document.querySelectorAll(".tilt"), {
+      max: 10,
+      speed: 700,
+      glare: true,
+      "max-glare": 0.3,
+    });
+  </script>
+
+</body>
+</html>
