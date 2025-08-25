@@ -12,7 +12,7 @@ import os
 cohere_api_key = os.getenv("COHERE_API_KEY")
 if not cohere_api_key:
     raise ValueError("❌ COHERE_API_KEY not set in environment!")
-cohere_client = ClientV2(api_key=COHERE_API_KEY)
+cohere_client = ClientV2(api_key=cohere_api_key)
 
 DEFAULT_THEME = "general"
 DEFAULT_DIFFICULTY = "easy"
