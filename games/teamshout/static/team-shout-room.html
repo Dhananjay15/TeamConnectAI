@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>🎤 Join or Create Room | Team Shout</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600&family=Inter:wght@400;600&display=swap" rel="stylesheet" />
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background: radial-gradient(ellipse at top, #0f0c29, #302b63, #000000);
+      color: white;
+      overflow-x: hidden;
+      min-height: 100vh;
+    }
+    .floating-emoji {
+      position: absolute;
+      font-size: 2rem;
+      opacity: 0.05;
+      animation: float 25s linear infinite;
+      user-select: none;
+      pointer-events: none;
+    }
+    @keyframes float {
+      0% { transform: translateY(100vh) rotate(0deg); }
+      100% { transform: translateY(-120vh) rotate(720deg); }
+    }
+    .glass-card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(14px);
+      border-radius: 1.5rem;
+      box-shadow: 0 0 25px rgba(168, 85, 247, 0.18);
+      transition: transform .12s ease, box-shadow .12s ease;
+    }
+    .glass-card:hover {
+      box-shadow: 0 0 40px rgba(236, 72, 153, 0.2);
+      transform: translateY(-3px);
+    }
+    .glass-header {
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(12px);
+    }
+    .spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255,255,255,0.18);
+      border-top-color: rgba(255,255,255,0.8);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      display: inline-block;
+      vertical-align: middle;
+      margin-left: 8px;
+    }
+    @keyframes spin{ to { transform: rotate(360deg); } }
+    input::placeholder { color: #cfc8e8; opacity: 0.8; }
+    button:disabled { opacity: 0.6; cursor: not-allowed; }
+  </style>
+</head>
+<body>
+  <!-- Floating Emojis -->
+  <div class="pointer-events-none select-none absolute inset-0 z-0">
+    <div class="floating-emoji" style="left: 10%">🎤</div>
+    <div class="floating-emoji" style="left: 30%">🎯</div>
+    <div class="floating-emoji" style="left: 60%">🔥</div>
+    <div class="floating-emoji" style="left: 80%">🎮</div>
+  </div>
+
+  <!-- Header -->
+  <header class="glass-header sticky top-0 z-50 w-full flex justify-between items-center px-6 py-4 shadow-lg">
+    <h1 class="text-2xl font-orbitron text-pink-400 font-bold">TeamConnect.fun</h1>
+    <nav class="text-sm font-medium text-white space-x-6">
+      <a href="/" class="hover:text-pink-400">Home</a>
+    </nav>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="text-center py-16 px-6">
+    <h2 class="text-5xl font-extrabold font-orbitron text-purple-400 drop-shadow-lg mb-4">🎤 Team Shout</h2>
+    <p class="text-lg text-gray-300 max-w-xl mx-auto mb-8">
+      Type fast, shout smart. Create or join a live room and compete with teammates in real-time.
+    </p>
+  </section>
+
+  <!-- Form Card -->
+  <main class="flex justify-center px-4 pb-24">
+    <div class="glass-card w-full max-w-xl p-8 text-center">
+      <h2 class="text-2xl font-bold text-white mb-6">Enter Your Name</h2>
+
+      <input id="username" type="text" placeholder="Your Name"
+        class="w-full mb-6 px-4 py-3 rounded-xl text-lg text-center border border-purple-200 focus:outline-none focus:ring-2 focus:ring-purple-400 bg-black/20 text-white" />
+
+      <div id="room-actions" class="hidden">
+        <h2 class="text-xl font-semibold text-white mb-4">Choose an Action</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <button id="create-btn"
+            class="bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-xl text-lg shadow flex items-center justify-center gap-3">
+            🎮 Create Room
+            <span id="create-spinner" class="spinner" style="display:none"></span>
+          </button>
+          <button id="join-btn"
+            class="bg-pink-600 hover:bg-pink-700 text-white py-3 rounded-xl text-lg shadow">🚪 Join Room</button>
+        </div>
+      </div>
+
+      <div id="join-box" class="hidden mt-6">
+        <input id="roomcode" type="text" placeholder="Enter Room Code (e.g. 2291 or SHOUT-2291)"
+          class="w-full mb-3 px-4 py-3 rounded-xl border border-pink-300 text-center text-lg bg-black/20 text-white focus:outline-none focus:ring-2 focus:ring-pink-400 uppercase tracking-widest" />
+        <button id="join-room-btn"
+          class="w-full py-3 bg-pink-600 text-white rounded-xl shadow hover:bg-pink-700 text-lg transition flex items-center justify-center">
+          🔗 Join
+          <span id="join-spinner" class="spinner" style="display:none"></span>
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="text-center text-sm text-gray-500 py-8 border-t border-white/10">
+    <p>&copy; 2025 TeamConnect.fun — Crafted with ❤️ by Dhananjay Dubey</p>
+    <p class="mt-2">
+      Contact: <a href="mailto:hello@teamconnect.fun" class="text-pink-500 hover:underline">hello@teamconnect.fun</a>
+    </p>
+  </footer>
+
+  <script>
+    // socket setup
+    const socket = io("/teamshout");
+
+    // elements
+    const usernameInput = document.getElementById("username");
+    const roomActions = document.getElementById("room-actions");
+    const joinBox = document.getElementById("join-box");
+    const createBtn = document.getElementById("create-btn");
+    const joinBtn = document.getElementById("join-btn");
+    const joinRoomBtn = document.getElementById("join-room-btn");
+    const roomCodeInput = document.getElementById("roomcode");
+    const createSpinner = document.getElementById("create-spinner");
+    const joinSpinner = document.getElementById("join-spinner");
+
+    let pending = false; // prevent double-clicks
+
+    // enable actions when username present
+    usernameInput.addEventListener("input", () => {
+      if (usernameInput.value.trim().length > 1) {
+        roomActions.classList.remove("hidden");
+      } else {
+        roomActions.classList.add("hidden");
+        joinBox.classList.add("hidden");
+      }
+    });
+
+    // show join input box
+    joinBtn.addEventListener("click", () => {
+      joinBox.classList.toggle("hidden");
+      roomCodeInput.focus();
+    });
+
+    // helper: normalize room input into `shout-XXXX`
+    function normalizeRoomInput(raw) {
+      if (!raw) return null;
+      let s = raw.trim();
+      // if user supplied shout- prefix (case-insensitive), extract digits
+      s = s.replace(/^shout-/i, "");
+      // keep only alphanumeric and hyphen in remainder
+      s = s.replace(/[^A-Za-z0-9-]/g, "");
+      // if user typed only 4-digit numeric, keep it
+      if (s.length === 0) return null;
+      // ensure uppercase digits if desired — we'll return numeric or alphanumeric
+      return "shout-" + s;
+    }
+
+    // helper: ensure socket connected before emitting, with timeout fallback
+    function emitWhenConnected(event, data, callback, timeoutMs = 7000) {
+      if (socket.connected) {
+        socket.emit(event, data, callback);
+        return;
+      }
+      // wait for connect
+      const onConnect = () => {
+        socket.off("connect", onConnect);
+        socket.emit(event, data, callback);
+      };
+      socket.on("connect", onConnect);
+      // fallback timeout
+      setTimeout(() => {
+        socket.off("connect", onConnect);
+        if (!socket.connected) {
+          if (typeof callback === "function") callback({ success: false, error: "Socket connect timeout" });
+        }
+      }, timeoutMs);
+    }
+
+    // generate a reasonably unique playerId
+    function makePlayerId() {
+      // player-<timestamp>-<random4>
+      const r = Math.floor(Math.random() * 9000) + 1000;
+      return `player-${Date.now()}-${r}`;
+    }
+
+    // create room flow
+    createBtn.addEventListener("click", () => {
+      if (pending) return;
+      const name = usernameInput.value.trim();
+      if (!name) return alert("Please enter your name.");
+      pending = true;
+      createBtn.disabled = true;
+      createSpinner.style.display = "inline-block";
+
+      // generate 4-digit room code
+      const code = Math.floor(1000 + Math.random() * 9000).toString();
+      const room = `shout-${code}`;
+      const playerId = makePlayerId();
+
+      // emit join-room as host
+      emitWhenConnected("join-room", { name, room, playerId, isHost: true }, (res) => {
+        pending = false;
+        createBtn.disabled = false;
+        createSpinner.style.display = "none";
+
+        if (!res || !res.success) {
+          alert(res?.error || "Failed to create room. Try again.");
+          console.warn("create-room failed:", res);
+          return;
+        }
+
+        // Save and redirect
+        localStorage.setItem("username", name);
+        localStorage.setItem("room", room);
+        localStorage.setItem("isHost", "true");
+        localStorage.setItem("playerId", playerId);
+        // small delay to ensure server updated player list
+        window.location.href = "team-shout-lobby.html";
+      });
+    });
+
+    // join room flow
+    joinRoomBtn.addEventListener("click", () => {
+      if (pending) return;
+      const name = usernameInput.value.trim();
+      const raw = roomCodeInput.value.trim();
+      const normalized = normalizeRoomInput(raw);
+
+      if (!name) return alert("Please enter your name.");
+      if (!normalized) return alert("Please enter a valid room code (e.g. 2291 or SHOUT-2291).");
+
+      pending = true;
+      joinRoomBtn.disabled = true;
+      joinSpinner.style.display = "inline-block";
+
+      const playerId = makePlayerId();
+
+      emitWhenConnected("join-room", { name, room: normalized, playerId, isHost: false }, (res) => {
+        pending = false;
+        joinRoomBtn.disabled = false;
+        joinSpinner.style.display = "none";
+
+        if (!res || !res.success) {
+          alert(res?.error || "Failed to join room. Check room code and try again.");
+          console.warn("join-room failed:", res);
+          return;
+        }
+
+        localStorage.setItem("username", name);
+        localStorage.setItem("room", normalized);
+        localStorage.setItem("isHost", "false");
+        localStorage.setItem("playerId", playerId);
+        window.location.href = "team-shout-lobby.html";
+      });
+    });
+
+    // allow Enter key to create or join depending on UI state
+    usernameInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        if (!roomActions.classList.contains("hidden")) {
+          // default: show join box
+          if (joinBox.classList.contains("hidden")) {
+            joinBox.classList.remove("hidden");
+            roomCodeInput.focus();
+          } else {
+            // attempt join
+            joinRoomBtn.click();
+          }
+        }
+      }
+    });
+
+    roomCodeInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        joinRoomBtn.click();
+      }
+    });
+
+    // debug connect logging
+    socket.on("connect", () => {
+      console.log("Connected to server:", socket.id);
+    });
+
+    socket.on("connect_error", (err) => {
+      console.warn("Socket connect_error:", err);
+    });
+
+    socket.on("disconnect", (reason) => {
+      console.log("Socket disconnected:", reason);
+    });
+  </script>
+</body>
+</html>
